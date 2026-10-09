@@ -53,6 +53,10 @@ class DnsAPI(BaseAPI):
 
     provision = ensure_zone
 
+    def delete_zone(self, domain: str) -> None:
+        """Delete the whole zone (``nameserver.delete``)."""
+        self.call("nameserver.delete", {"domain": to_punycode(domain)})
+
     def list_zones(self, *, page: int = 1, page_size: int = 20) -> list[dict[str, Any]]:
         """List DNS zones in the account (paginated)."""
         data = self.call(

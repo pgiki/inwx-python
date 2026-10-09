@@ -463,6 +463,14 @@ def test_dns_set_a_records():
     assert any(c[0] == "nameserver.deleteRecord" for c in iw._http.calls)
 
 
+def test_dns_delete_zone():
+    iw = _transport(_session(**{"nameserver.delete": _rpc(1000, {})}))
+    iw.dns.delete_zone("example.com")
+    method, params = iw._http.calls[1]
+    assert method == "nameserver.delete"
+    assert params["domain"] == "example.com"
+
+
 # -- pricing / tld list --
 
 
