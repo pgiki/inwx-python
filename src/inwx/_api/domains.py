@@ -269,6 +269,22 @@ class DomainsAPI(BaseAPI):
         """EPP auth code for a domain (for transferring it away)."""
         return self.get_info(domain).auth_code
 
+    def set_privacy(self, domain: str, enabled: bool) -> bool:
+        """Toggle INWX Whois Privacy (``domain.update`` ``extData``).
+
+        Mirrors the official INWX WHMCS plugin (``inwx_IDProtectToggle``):
+        ``extData={"WHOIS-PROTECTION": bool}`` replaces all four contacts
+        with the privacy proxy. Only shield-marked TLDs accept it; others
+        reject the update (callers treat that as a logged warning, never a
+        registration failure).
+        """
+        name = to_punycode(domain)
+        self.call(
+            "domain.update",
+            {"domain": name, "extData": {"WHOIS-PROTECTION": bool(enabled)}},
+        )
+        return bool(enabled)
+
     def set_autorenew(self, domain: str, enabled: bool, mode: str = "AUTORENEW") -> Domain:
         """Set the renewal mode (default ``AUTORENEW``; e.g. ``AUTOEXPIRE`` to disable)."""
         name = to_punycode(domain)

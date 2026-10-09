@@ -306,6 +306,20 @@ def test_lock_cycle_and_epp():
     assert iw.domains.get_auth_code("example.com") == "s3cret"
 
 
+def test_set_privacy_sends_extdata():
+    iw = _transport(_session(**{"domain.update": _rpc(1000, {})}))
+    assert iw.domains.set_privacy("Example.COM", True) is True
+    update = next(c for c in iw._http.calls if c[0] == "domain.update")
+    assert update[1] == {
+        "domain": "example.com",
+        "extData": {"WHOIS-PROTECTION": True},
+        "lang": "en",
+    }
+    assert iw.domains.set_privacy("example.com", False) is False
+    updates = [c for c in iw._http.calls if c[0] == "domain.update"]
+    assert updates[-1][1]["extData"] == {"WHOIS-PROTECTION": False}
+
+
 def test_nameservers_roundtrip():
     iw = _transport(
         _session(
