@@ -28,7 +28,7 @@ class DomainsAPI(BaseAPI):
     """Domain availability, registration, renewal, transfer and settings."""
 
     # -- availability --
-    def check(self, *domains: str) -> list[DomainCheck]:
+    def check(self, *domains: str, include_pricing: bool = True) -> list[DomainCheck]:  # noqa: ARG002 - accepted for check-provider compat; INWX always returns premium price
         """Check availability for up to a list of domains in one call.
 
         Unlike Go54's per-SLD lookup, ``domain.check`` accepts an array of
