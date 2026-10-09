@@ -11,7 +11,11 @@ from .base import BaseAPI
 def _contact_payload(contact: Contact | dict[str, Any]) -> dict[str, Any]:
     if isinstance(contact, Contact):
         return contact.api_fields()
-    return {k: v for k, v in dict(contact or {}).items() if v not in ("", None)}
+    data = {k: v for k, v in dict(contact or {}).items() if v not in ("", None)}
+    # ``contact.create`` rejects payloads without ``type`` (2003 MISSING_TYPE);
+    # default like the ``Contact`` model so dict callers never hit that.
+    data["type"] = str(data.get("type") or "PERSON").strip().upper() or "PERSON"
+    return data
 
 
 class ContactsAPI(BaseAPI):

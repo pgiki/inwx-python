@@ -370,6 +370,22 @@ def test_contact_model_api_fields():
     assert fields["cc"] == "NG" and fields["voice"] == "+234.812345678" and "id" not in fields
 
 
+def test_contact_payload_defaults_type_for_dicts():
+    """``contact.create`` requires ``type`` (2003 MISSING_TYPE otherwise)."""
+    from inwx._api.contacts import _contact_payload
+
+    fields = _contact_fields()
+    del fields["type"]
+    payload = _contact_payload(fields)
+    assert payload["type"] == "PERSON"
+    assert _contact_payload({**fields, "type": "org"})["type"] == "ORG"
+    assert _contact_payload(Contact.from_profile(name="N", email="e@x.com"))["type"] == "PERSON"
+    assert (
+        _contact_payload(Contact.from_profile(name="N", email="e@x.com", organization="Acme"))["type"]
+        == "ORG"
+    )
+
+
 # -- dns --
 
 
