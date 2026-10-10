@@ -564,7 +564,7 @@ def test_pricing_catalog():
     )
     (row,) = iw.pricing.catalog("com")
     assert row.tld == "com"
-    assert str(row.register) == "10.5" and str(row.renew) == "11.0"
+    assert str(row.register_price) == "10.5" and str(row.renew) == "11.0"
     _, params = next(c for c in iw._http.calls if c[0] == "domain.getPrices")
     assert params["tld"] == ["com"]
 

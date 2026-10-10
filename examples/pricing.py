@@ -14,7 +14,7 @@ def main() -> None:
     tlds = [a for a in sys.argv[1:] if not a.startswith("--")] or ["com", "de", "ai", "ng"]
     iw = Inwx()
     for row in iw.pricing.catalog(*tlds):
-        print(f".{row.tld}: reg={row.register} renew={row.renew} transfer={row.transfer} {row.currency}")
+        print(f".{row.tld}: reg={row.register_price} renew={row.renew} transfer={row.transfer} {row.currency}")
 
 
 if __name__ == "__main__":

@@ -294,13 +294,17 @@ class TldPrice(InwxModel):
 
     tld: str = ""
     currency: str = ""
-    register: Decimal | None = Field(default=None, alias="createPrice")
+    # NOTE: named ``register_price`` (not ``register``) — a ``register``
+    # field would shadow ``ABCMeta.register`` on the pydantic base, which
+    # pydantic ≥2.11 rejects with a ``UserWarning``. The ``createPrice``
+    # alias keeps parsing the DomRobot wire shape unchanged.
+    register_price: Decimal | None = Field(default=None, alias="createPrice")
     renew: Decimal | None = Field(default=None, alias="renewalPrice")
     transfer: Decimal | None = Field(default=None, alias="transferPrice")
     update: Decimal | None = Field(default=None, alias="updatePrice")
     promo: bool = False
 
-    @field_validator("register", "renew", "transfer", "update", mode="before")
+    @field_validator("register_price", "renew", "transfer", "update", mode="before")
     @classmethod
     def _parse_price(cls, v: Any) -> Decimal | None:
         return _to_decimal(v)
