@@ -306,6 +306,45 @@ def test_lock_cycle_and_epp():
     assert iw.domains.get_auth_code("example.com") == "s3cret"
 
 
+def test_call_relogin_retries_non_auth_rejection_once():
+    answers = iter(
+        [
+            _rpc(2002, None, "Command use error"),
+            _rpc(1000, {"domain": [{"domain": "example.com", "avail": 1}]}),
+        ]
+    )
+    iw = _transport(
+        _session(
+            **{
+                "account.login": _rpc(1000, {}),
+                "domain.check": lambda params: next(answers),
+            }
+        )
+    )
+    rows = iw.domains.check("example.com")
+    assert rows and rows[0].available is True
+    checks = [c for c in iw._http.calls if c[0] == "domain.check"]
+    assert len(checks) == 2
+    logins = [c for c in iw._http.calls if c[0] == "account.login"]
+    assert len(logins) == 2  # initial + re-login before retry
+
+
+def test_call_raises_persistent_rejection_after_one_retry():
+    iw = _transport(
+        _session(
+            **{
+                "account.login": _rpc(1000, {}),
+                "domain.check": _rpc(2002, None, "Command use error"),
+            }
+        )
+    )
+    with pytest.raises(InwxError) as excinfo:
+        iw.domains.check("example.com")
+    assert excinfo.value.code == 2002
+    checks = [c for c in iw._http.calls if c[0] == "domain.check"]
+    assert len(checks) == 2  # initial + exactly one retry
+
+
 def test_set_privacy_sends_extdata():
     iw = _transport(_session(**{"domain.update": _rpc(1000, {})}))
     assert iw.domains.set_privacy("Example.COM", True) is True
@@ -474,7 +513,10 @@ def test_ensure_zone_sends_default_nameservers():
 
     def flaky(url, **kwargs):
         body = kwargs.get("json") or {}
-        if body.get("method") == "nameserver.info" and calls["infos"] == 0:
+        # Fail the first two infos: the initial call and the one re-login
+        # retry (a persistent 2303 means the zone is genuinely absent, so
+        # ensure_zone must still fall through to create).
+        if body.get("method") == "nameserver.info" and calls["infos"] < 2:
             calls["infos"] += 1
             iw._http.calls.append(("nameserver.info", body.get("params") or {}))
             return _rpc(2303, None, "Object does not exist")

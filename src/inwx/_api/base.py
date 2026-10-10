@@ -6,8 +6,12 @@ Wire format::
     -> {"code": 1000, "msg": "...", "resData": {...}}
 
 Session handling: the first call performs ``account.login`` (cookies persist
-on the ``httpx.Client`` jar); a ``2200``-class auth failure triggers one
-re-login + retry. ``close()`` on the client calls ``account.logout``.
+on the ``httpx.Client`` jar); any explicit API rejection triggers one
+re-login + retry. A stale session can surface as a *non-auth* error
+(observed live: ``2002`` on every call until process restart), so the retry
+is not limited to the auth class. Transport failures (code ``0``, unknown
+outcome) are never retried. ``close()`` on the client calls
+``account.logout``.
 """
 
 from __future__ import annotations
@@ -96,9 +100,14 @@ class BaseAPI:
         try:
             return self._raw(method, dict(params or {}))
         except InwxError as e:
-            if e.auth_failure and not _retried:
-                logger.debug("auth failure on %s; re-login and retry once", method)
-                self._client._logged_in = False
-                self.login()
-                return self.call(method, params, _retried=True)
-            raise
+            if _retried or e.code == 0:
+                # Already retried, or a transport failure with unknown
+                # outcome (never blind-retry a possibly-applied command).
+                raise
+            # An explicit API rejection means the command was NOT applied,
+            # so one re-login + retry is safe — this is what heals a stale
+            # session masquerading as a non-auth error (e.g. 2002).
+            logger.debug("inwx %s failed (%s); re-login and retry once", method, e)
+            self._client._logged_in = False
+            self.login()
+            return self.call(method, params, _retried=True)
