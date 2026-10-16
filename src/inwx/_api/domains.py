@@ -169,7 +169,7 @@ class DomainsAPI(BaseAPI):
         contact: Contact | dict[str, Any] | None = None,
         auth_code: str | None = None,
         eppcode: str | None = None,
-        years: int = 1,
+        years: int = 1,  # noqa: ARG002 - kept for signature compat; domain.transfer takes no period
         period: str | None = None,
         nameservers: list[str] | None = None,
         transfer_lock: bool = True,
@@ -178,9 +178,16 @@ class DomainsAPI(BaseAPI):
         timeout: float = 30.0,  # noqa: ARG002 - accepted for compat
         poll_interval: float = 5.0,  # noqa: ARG002 - accepted for compat
     ) -> Domain:
-        """Submit a domain transfer (charged on registry success)."""
+        """Submit a domain transfer (charged on registry success).
+
+        ``domain.transfer`` accepts no ``period`` (the registry sets the
+        transfer period) — sending one fails with ``2000 UNKNOWN_PARAM``.
+        ``period`` is forwarded only when explicitly given.
+        """
         name = to_punycode(domain)
-        body: dict[str, Any] = {"domain": name, "period": period or period_param(years)}
+        body: dict[str, Any] = {"domain": name}
+        if period:
+            body["period"] = period
         if contact is not None:
             body.update(self._resolve_contact_ids(contact))
         code = eppcode or auth_code

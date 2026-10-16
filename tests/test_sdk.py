@@ -289,6 +289,25 @@ def test_transfer_sends_authcode():
     transfer = next(c for c in iw._http.calls if c[0] == "domain.transfer")
     assert transfer[1]["authCode"] == "ABC123"
     assert transfer[1]["registrant"] == 9
+    # domain.transfer takes no period (registry sets it); sending one fails
+    # with 2000 UNKNOWN_PARAM.
+    assert "period" not in transfer[1]
+
+
+def test_transfer_forwards_explicit_period_only():
+    iw = _transport(
+        _session(
+            **{
+                "contact.list": _rpc(1000, {"count": 0, "contact": []}),
+                "contact.create": _rpc(1000, {"id": 9}),
+                "domain.transfer": _rpc(1000, {"roId": 8}),
+                "domain.info": _rpc(1000, {"domain": "example.com"}),
+            }
+        )
+    )
+    iw.domains.transfer("example.com", contact=_contact_fields(), auth_code="ABC123", period="1Y")
+    transfer = next(c for c in iw._http.calls if c[0] == "domain.transfer")
+    assert transfer[1]["period"] == "1Y"
 
 
 def test_lock_cycle_and_epp():
