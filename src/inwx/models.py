@@ -113,6 +113,13 @@ class Domain(InwxModel):
     billing_id: int | None = Field(default=None, alias="billing")
     nameservers: list[str] = Field(default_factory=list, alias="ns")
 
+    @field_validator(
+        "name", "unicode_name", "status", "period", "auth_code", "renewal_mode", mode="before"
+    )
+    @classmethod
+    def _nullable_domain_text(cls, value: Any) -> Any:
+        return "" if value is None else value
+
     @field_validator("registration_date", "expiry_date", "updated_date", mode="before")
     @classmethod
     def _parse_dt(cls, v: Any) -> datetime | None:

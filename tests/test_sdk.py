@@ -233,7 +233,16 @@ def _register_routes():
             "domain.create": _rpc(1000, {"roId": 7, "price": 10.0, "currency": "EUR"}),
             "domain.info": _rpc(
                 1000,
-                {"roId": 7, "domain": "example.com", "status": "ok", "ns": ["ns.inwx.de"]},
+                {
+                    "roId": 7,
+                    "domain": "example.com",
+                    "status": None,
+                    "period": None,
+                    "authCode": None,
+                    "renewalMode": None,
+                    "transferLock": None,
+                    "ns": None,
+                },
             ),
         }
     )
@@ -249,6 +258,8 @@ def test_register_ensures_contact_and_sends_ns():
     )
     assert isinstance(out, Domain)
     assert out.name == "example.com"
+    assert out.status == "" and out.locked is False
+    assert out.nameservers == []
     create = next(c for c in iw._http.calls if c[0] == "domain.create")
     assert create[1]["domain"] == "example.com"
     assert create[1]["period"] == "2Y"
@@ -257,6 +268,35 @@ def test_register_ensures_contact_and_sends_ns():
     assert create[1]["registrant"] == 42
     contact_create = next(c for c in iw._http.calls if c[0] == "contact.create")
     assert contact_create[1]["email"] == "exam@gmail.com"
+
+
+def test_get_info_tolerates_null_optional_domain_fields():
+    iw = _transport(
+        _session(
+            **{
+                "domain.info": _rpc(
+                    1000,
+                    {
+                        "domain": "example.com",
+                        "status": None,
+                        "period": None,
+                        "authCode": None,
+                        "renewalMode": None,
+                        "transferLock": None,
+                        "ns": None,
+                    },
+                )
+            }
+        )
+    )
+    domain = iw.domains.get_info("example.com")
+    assert domain.name == "example.com"
+    assert domain.status == ""
+    assert domain.period == ""
+    assert domain.auth_code == ""
+    assert domain.renewal_mode == ""
+    assert domain.locked is False
+    assert domain.nameservers == []
 
 
 def test_renew_fetches_expiration():
